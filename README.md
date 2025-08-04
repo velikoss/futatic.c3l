@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A lightweight static futures implementation for the C3 programming language.
+FUTATIC — is a C3 library with FUTures, that are stATICally typed!
 
 *Heavily WIP, currently not intended for production use*
 
