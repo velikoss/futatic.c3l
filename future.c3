@@ -1,52 +1,76 @@
-module futatic::future { Return };
+<*
+  @require $defined((Struct){}.poll)
+*>
+module futatic::future { Struct };
 
-alias PollFn = fn Result {Return} (void*);
+// $typeof((Struct).poll()) -> fn ...(...) -> .returns -> typeid -> Type
+alias ReturnType = $typeof((Struct){}.poll()); 
+alias Fn = $typeof((Struct).poll); 
 
-struct FutureDyn 
+struct Future
 {
-  void* inner;
-  PollFn poll_fn;
+    inline Struct inner;
 }
 
-fn Result {Return} FutureDyn.poll(&self) 
+macro Future.poll(&self) 
 {
-  return self.poll_fn(self.inner);
+    ReturnType result = self.inner.poll();
+    return result;
 }
 
 <*
-  @require $defined(($typeof(*future)){}.poll)
-  @require $typeof(($typeof(*future)){}.poll().value).typeid == Return.typeid
+  @require $defined($typefrom($typeof(x).returns).poll)
 *>
-macro FutureDyn wrap_dyn(&future)
+macro Future.then(&self, x)
 {
-  return {
-    .inner = (void*)future,
-    .poll_fn = (PollFn)&($typeof(*future)).poll,
-  };
+    var $SecondFuture = $typefrom($typeof(x).returns);
+    var $Then = Then {Struct, $SecondFuture};
+    Future {$Then} ret;
+    ret.first_pending.first = self.inner;
+    ret.first_pending.then  = ($typeof(ret.first_pending.then)) x;
+    return ret;
 }
 
-struct Ready
+module futatic::future::then {FirstFuture, SecondFuture};
+
+alias FirstResult = $typefrom($typeof((FirstFuture).poll).returns); 
+alias FirstResultValue = $typeof((FirstResult){}.value); 
+alias SecondResult = $typefrom($typeof((SecondFuture).poll).returns); 
+alias ThenFn = fn SecondFuture (FirstResultValue);
+
+enum ThenState 
 {
-    Return value;
+    FIRST_PENDING,
+    SECOND_PENDING
 }
 
-fn Result {Return} Ready.poll(&self)
+union ThenInner
 {
-    return {
-        .state = FINISHED,
-        .value = self.value
-    };
+    struct first_pending 
+    {
+        FirstFuture first;
+        ThenFn then;
+    }
+    SecondFuture second_pending;
 }
 
-struct Never
+struct Then
 {
-    bool __ignore;
+    inline ThenInner inner;
+    ThenState state;
 }
 
-fn Result {Return} Never.poll(&self)
+macro Then.poll(&self)
 {
-    return {
-        .state = PENDING,
-    };
+    switch (self.state) {
+    case FIRST_PENDING:
+        FirstResult res = self.first_pending.first.poll();
+        if (res.state == FINISHED) {
+            self.second_pending = self.first_pending.then(res.value);
+            self.state = SECOND_PENDING;
+        }
+        return (SecondResult) {.state = PENDING};
+    case SECOND_PENDING:
+        return self.second_pending.poll();
+    }
 }
-

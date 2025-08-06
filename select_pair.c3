@@ -18,4 +18,3 @@ fn Result {Return} PairSelect.poll(&self)
     if (res.state == FINISHED) return res;
     return self.right.poll();
 }
-

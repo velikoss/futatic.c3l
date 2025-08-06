@@ -70,6 +70,21 @@ WIP, but there are some ways now:
   }
   ```
 ## API
+- Future { Struct }
+
+  This structure is a wrapper for user-defined struct to add more functionality.
+  
+  - .then(fn SomeFuture(x){...}) → Future{Then{*}}<br>
+  Chains an asynchronous operation to execute after this future completes.<br>
+  x - lambda that returns struct with .poll method
+
+- Then { FirstFuture, SecondFuture }
+
+  The `Then` struct is a future combinator that sequentially chains two asynchronous operations. It is created when you call `.then()` on a `Future` and represents the asynchronous execution of:
+
+  1. The first future (`FirstFuture`), followed by  
+  2. The second future (`SecondFuture`), which is produced by applying a callback to the result of the first.
+
 - Result { Return }
   
   This structure must be used for all futures poll returns. 
@@ -99,6 +114,8 @@ WIP
 ```r
 import futatic;
 
+alias ReadyBool = Ready {bool};
+
 fn int main()
 {    
     Ready {bool} f1 = {.value = true};
@@ -108,7 +125,16 @@ fn int main()
     $typeof(select::select {bool} (f1, f2, f3)) boo = select::select {bool} (f1, f2, f3); // WIP
 
     Result {bool} result = boo.poll();
-  
+
+    
+    var future = ((Future {ReadyBool}) {.value = false}).then(fn ReadyBool(bool value) { // WIP, var because complex generic
+        return (ReadyBool) {.value = !value};
+    });
+
+    io::printn($typeof(future).qnameof);  // futatic_future$futatic_future_then$futatic$bool$.Ready$futatic$bool$.Ready$.Then$::Future
+    io::printn(future.poll());  // { state: PENDING, value: false }
+    io::printn(future.poll());  // { state: FINISHED, value: true }
+
     return 0;
 }
 ```
