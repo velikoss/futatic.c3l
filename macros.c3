@@ -2,10 +2,6 @@ module futatic::macros;
 import futatic;
 import std::io;
 
-macro init($Type) {
-    maker::importer {$Type} (($Type){});
-}
-
 macro ready(value) 
 {
     return (Ready {$typeof(value)}) {
