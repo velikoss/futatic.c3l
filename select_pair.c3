@@ -1,10 +1,9 @@
 <*
-@require $defined((Left){}.poll)
-@require $defined((Right){}.poll)
-@require $typeof((Left){}.poll().value).typeid == Return.typeid
-@require $typeof((Right){}.poll().value).typeid == Return.typeid
+@require macros::@is_future(Return, Left)
+@require macros::@is_future(Return, Right)
 *>
 module futatic::select::pair {Left, Right, Return};
+import futatic::macros;
 
 struct PairSelect
 {
