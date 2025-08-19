@@ -2,19 +2,25 @@ module futatic::macros;
 import futatic;
 import std::io;
 
-macro bool is_future($FutType) @const
+macro bool is_future($FutType, $Return, $Ctx) @const
 {
-    $echo $FutType.qnameof;
-
     $FutType $val;
 
     $if !$defined($val.poll):
+        $echo "False";
         return false;
     $else
     
-    $echo $typeof($val.poll());
 
-    return @assignable_to($val.poll(), Result{$Return});
+    var $ret = @assignable_to($val.poll(($Ctx){}), Result{$Return});
+    $if !$ret:
+        $echo $FutType.qnameof;
+        $echo $typeof($val.poll(($Ctx){})).qnameof;
+        $echo Result{$Return}.qnameof;
+        $echo "Non assignable";
+    $endif
+    
+    return $ret;
 
     $endif
 }
@@ -22,10 +28,12 @@ macro bool is_future($FutType) @const
 <*
   @require $vacount >= 1 : "Should provide at least two futures in select"
 *>
-macro bool are_futures($Return, $Ctx, ...)
+macro bool are_futures($Return, ...)
 {
     $for var $i = 0; $i < $vacount; $i++:
-        $if !is_future($Return, $Ctx, $typeof($vaarg[$i])):
+        var $FutType = $typeof($vaarg[$i]);
+        var $PollFn = $typeof($FutType.poll);
+        $if !is_future($FutType, $Return, $PollFn.paramsof[1].type):
             return false;
         $endif
     $endfor
@@ -39,14 +47,14 @@ macro wrap_future(x)
 
 macro ready($Ctx, ret) 
 {
-    return wrap_future((Ready {$typeof(ret), $Ctx}) {
+    return wrap_future((Ready {$typeof(ret)}) {
         .value = ret,
     });
 }
 
 macro never($Ctx, $Return) 
 {
-    return wrap_future((Never {$Type, $Ctx}) {});
+    return wrap_future((Never {$Type}) {});
 }
 
 macro block_on(fut) 

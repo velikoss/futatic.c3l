@@ -1,11 +1,11 @@
-module futatic { Return, Ctx };
+module futatic { Return };
 
 struct Ready
 {
     Return value;
 }
 
-fn Result {Return} Ready.poll(&self, Ctx _ctx)
+fn Result {Return} Ready.poll(&self, NoOpCtx _ctx)
 {
     return {
         .state = FINISHED,
@@ -18,7 +18,7 @@ struct Never
     bool __ignore;
 }
 
-fn Result {Return} Never.poll(&self, Ctx _ctx)
+fn Result {Return} Never.poll(&self, NoOpCtx _ctx)
 {
     return {
         .state = PENDING,

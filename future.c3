@@ -1,23 +1,26 @@
 <*
-  @require macros::is_future($typeof($typeof((FutureInner).poll).paramsof[1]))
+  @require macros::is_future(FutureInner, ReturnTypeValue, Ctx)
 *>
 module futatic::future { FutureInner };
 import futatic;
-
+ 
 FutureInner inner_dummy;
 
-alias ReturnType = $typeof(inner_dummy.poll()); 
-alias Fn = $typeof((FutureInner).poll); 
-alias Ctx = $typeof($typeof((FutureInner).poll).paramsof[1]);
+alias Fn @private = $typeof((FutureInner).poll); 
+alias Ctx @if($defined(Fn.paramsof)) @private = $typefrom(Fn.paramsof[1].type);
+alias Ctx @if(!$defined(Fn.paramsof)) @private = NoOpCtx;
+alias ReturnType @if($defined(Fn.paramsof)) @private = $typefrom(Fn.returns); 
+alias ReturnType @if(!$defined(Fn.paramsof)) @private = $typeof(inner_dummy.poll((Ctx) {})); 
+alias ReturnTypeValue @private = $typeof(((ReturnType) {}).value); 
 
 struct Future
 {
     inline FutureInner inner;
 }
 
-macro Future.poll(&self, Ctx ctx) 
+macro Future.poll(&self, Ctx ctx = (Ctx) {}) 
 {
-    ReturnType result = self.inner.poll();
+    ReturnType result = self.inner.poll(ctx);
     return result;
 }
 
@@ -27,21 +30,25 @@ macro Future.poll(&self, Ctx ctx)
 macro Future.then(&self, x)
 {
     var $SecondFuture = $typefrom($typeof(x).returns);
-    var $Then = Then {FutureInner, $SecondFuture};
+    var $Then = Then {FutureInner, $SecondFuture, Ctx};
     Future {$Then} ret;
     ret.first_pending.first = self.inner;
     ret.first_pending.then  = ($typeof(ret.first_pending.then)) x;
     return ret;
 }
 
-//<*
-    //@require macros::is_future()
-//*>
+// <*
+// @require macros::is_future(FirstFuture, FirstResult, FirstPoll.paramsof[1].type)
+// @require macros::is_future(SecondFuture, SecondResult, SecondPoll.paramsof[1].type)
+// *>
 module futatic::future::then {FirstFuture, SecondFuture, Ctx};
+import futatic::macros;
 
-alias FirstResult = $typefrom($typeof((FirstFuture).poll).returns); 
+alias FirstPoll = $typeof((FirstFuture).poll);
+alias FirstResult = $typefrom(FirstPoll.returns); 
 alias FirstResultValue = $typeof((FirstResult){}.value); 
-alias SecondResult = $typefrom($typeof((SecondFuture).poll).returns); 
+alias SecondPoll = $typeof((SecondFuture).poll); 
+alias SecondResult = $typefrom(SecondPoll.returns); 
 alias ThenFn = fn SecondFuture (FirstResultValue);
 
 enum ThenState 

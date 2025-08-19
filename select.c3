@@ -4,7 +4,7 @@ import std::io;
 
 <*
   @require $vacount >= 1 : "Should provide at least one future in select"
-  @require macros::@are_futures(Return, $vasplat)
+  @require macros::are_futures(Return, $vasplat)
 *>
 macro select(...)
 {   
