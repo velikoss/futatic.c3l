@@ -1,18 +1,21 @@
 <*
-  @require $defined((Struct){}.poll)
+  @require macros::is_future($typeof($typeof((FutureInner).poll).paramsof[1]))
 *>
-module futatic::future { Struct };
+module futatic::future { FutureInner };
+import futatic;
 
-// $typeof((Struct).poll()) -> fn ...(...) -> .returns -> typeid -> Type
-alias ReturnType = $typeof((Struct){}.poll()); 
-alias Fn = $typeof((Struct).poll); 
+FutureInner inner_dummy;
+
+alias ReturnType = $typeof(inner_dummy.poll()); 
+alias Fn = $typeof((FutureInner).poll); 
+alias Ctx = $typeof($typeof((FutureInner).poll).paramsof[1]);
 
 struct Future
 {
-    inline Struct inner;
+    inline FutureInner inner;
 }
 
-macro Future.poll(&self) 
+macro Future.poll(&self, Ctx ctx) 
 {
     ReturnType result = self.inner.poll();
     return result;
@@ -24,14 +27,17 @@ macro Future.poll(&self)
 macro Future.then(&self, x)
 {
     var $SecondFuture = $typefrom($typeof(x).returns);
-    var $Then = Then {Struct, $SecondFuture};
+    var $Then = Then {FutureInner, $SecondFuture};
     Future {$Then} ret;
     ret.first_pending.first = self.inner;
     ret.first_pending.then  = ($typeof(ret.first_pending.then)) x;
     return ret;
 }
 
-module futatic::future::then {FirstFuture, SecondFuture};
+//<*
+    //@require macros::is_future()
+//*>
+module futatic::future::then {FirstFuture, SecondFuture, Ctx};
 
 alias FirstResult = $typefrom($typeof((FirstFuture).poll).returns); 
 alias FirstResultValue = $typeof((FirstResult){}.value); 
@@ -60,17 +66,17 @@ struct Then
     ThenState state;
 }
 
-macro Then.poll(&self)
+macro Then.poll(&self, Ctx ctx)
 {
     switch (self.state) {
     case FIRST_PENDING:
-        FirstResult res = self.first_pending.first.poll();
+        FirstResult res = self.first_pending.first.poll(ctx);
         if (res.state == FINISHED) {
             self.second_pending = self.first_pending.then(res.value);
             self.state = SECOND_PENDING;
         }
         return (SecondResult) {.state = PENDING};
     case SECOND_PENDING:
-        return self.second_pending.poll();
+        return self.second_pending.poll(ctx);
     }
 }
