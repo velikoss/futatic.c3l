@@ -7,19 +7,17 @@ import futatic;
 FutureInner inner_dummy;
 
 alias Fn @private = $typeof((FutureInner).poll); 
-alias Ctx @private = $typefrom($Fn.paramsof[1].type);
+alias Ctx @private @if($defined(Fn.paramsof) &&& $defined(Fn.paramsof[1])) = $typefrom(Fn.paramsof[1].type);
+alias Ctx @private @if(!($defined(Fn.paramsof) &&& $defined(Fn.paramsof[1]))) = NoOpCtx;
 alias ReturnType @if($defined(Fn.returns)) @private = $typefrom(Fn.returns); 
 alias ReturnType @if(!$defined(Fn.returns)) @private = $typeof(inner_dummy.poll((Ctx) {})); 
 alias ReturnTypeValue @private = $typeof(((ReturnType) {}).value); 
 
-struct Future
-{
-    inline FutureInner inner;
-}
+typedef Future = inline FutureInner;
 
 macro Future.poll(&self, Ctx ctx = (Ctx) {}) 
 {
-    ReturnType result = self.inner.poll(ctx);
+    ReturnType result = ((FutureInner*) self).poll(ctx);
     return result;
 }
 
@@ -31,7 +29,7 @@ macro Future.then(&self, x)
     var $SecondFuture = $typefrom($typeof(x).returns);
     var $Then = Then {FutureInner, $SecondFuture, Ctx};
     Future {$Then} ret;
-    ret.first_pending.first = self.inner;
+    ret.first_pending.first = *self;
     ret.first_pending.then  = ($typeof(ret.first_pending.then)) x;
     return ret;
 }
