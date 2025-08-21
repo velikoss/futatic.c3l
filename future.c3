@@ -7,10 +7,9 @@ import futatic;
 FutureInner inner_dummy;
 
 alias Fn @private = $typeof((FutureInner).poll); 
-alias Ctx @if($defined(Fn.paramsof)) @private = $typefrom(Fn.paramsof[1].type);
-alias Ctx @if(!$defined(Fn.paramsof)) @private = NoOpCtx;
-alias ReturnType @if($defined(Fn.paramsof)) @private = $typefrom(Fn.returns); 
-alias ReturnType @if(!$defined(Fn.paramsof)) @private = $typeof(inner_dummy.poll((Ctx) {})); 
+alias Ctx @private = $typefrom($Fn.paramsof[1].type);
+alias ReturnType @if($defined(Fn.returns)) @private = $typefrom(Fn.returns); 
+alias ReturnType @if(!$defined(Fn.returns)) @private = $typeof(inner_dummy.poll((Ctx) {})); 
 alias ReturnTypeValue @private = $typeof(((ReturnType) {}).value); 
 
 struct Future
